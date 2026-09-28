@@ -189,37 +189,90 @@ Examples include:
 - Sudden changes in unique-article counts
 - Sudden changes in referential-integrity coverage
 
-## 13. Future Recommendation System
+## 13. Recommendation Architecture
 
-The clean dataset will later become the input to a separate modeling layer.
-
-That later layer may contain:
+Preprocessing remains unchanged and ends at CLEAN DATA. Separate recommendation stages consume clean outputs:
 
 `	ext
-Clean data
+CLEAN DATA
     |
     v
-Feature engineering
+FEATURE ENGINEERING
     |
     v
-Model-ready interactions
+USER INTELLIGENCE
+    +-- History Analysis
+    +-- Behavior Analysis
+    +-- Intent Discovery
+    +-- Preference Profiling
+    +-- Behavioral Relationships
     |
     v
-Matrix factorization
+USER BEHAVIORAL PROFILE
     |
     v
-Candidate generation
+AFFINITY ENGINE
     |
     v
-Ranking
+CANDIDATE GENERATION
     |
     v
-Re-ranking
+RULE ENGINE
+    |
+    v
+RANKING / RE-RANKING
+    |
+    v
+RECOMMENDATIONS
 ```
 
-This repository deliberately stops before that stage.
+Feature engineering uses only actual inspected clean-data columns and metadata. It preserves user_id/docid/timestamp keys, repeated interaction evidence and an explicit as-of cutoff. Article features may use only real metadata fields; no embeddings or invented columns are assumed.
 
-## 14. AI Implementation Instruction
+## 14. User Intelligence and Inference
+
+User intelligence is the core reasoning layer: it analyzes chronological history and recurring patterns, then builds an interpretable profile that can explain affinities beyond exact article similarity.
+
+The profile distinguishes:
+
+- OBSERVED: source interactions and their timestamps/identifiers.
+- DERIVED: recurring behavior patterns calculated from observations.
+- INFERRED: candidate preferences or intents that may explain patterns.
+- MODEL SIGNAL: configured affinity contribution from supported evidence.
+- RULE: an auditable eligibility decision independent of affinity.
+
+Intent is inferred rather than directly observed. Every candidate intent must carry evidence, confidence, supporting interaction references and time context. It is never a confirmed psychological, demographic or personal fact; multiple candidates and changing strength are allowed.
+
+## 15. Behavioral Relationships and Preferences
+
+Relationship logic supports direct similarity and higher-level connections between non-identical behaviors. It must be configuration-driven and auditable; empty configuration means no asserted domain relationships. Example topics are illustrative, not hard-coded rules.
+
+Preference profiles distinguish persistent, emerging, recent and weak/uncertain signals, preserve evidence, and avoid one opaque preference score.
+
+## 16. Affinity and Rules
+
+Affinity combines configurable, interpretable components such as direct preference, behavioral relationship, recency, interaction strength, persistence and supported intent relevance. Component contributions, weight version and evidence are retained. Initial weights are experimental placeholders, not scientifically validated parameters, and must not be silently tuned.
+
+The rule engine remains separate: it determines candidate eligibility, returns passed/failed status, rule ID, reason and affected candidate, and preserves priority/configuration audit details. No consumed-item, freshness or business policy is assumed unless explicitly configured.
+
+Candidate generation follows user profile and affinity. Ranking and re-ranking are later stages and are not implemented by the intelligence pipeline.
+
+## 17. Daily Profile Updates and Temporal Safety
+
+Daily updates consume newly cleaned records, preserve prior evidence/profile versions, and record an as-of timestamp. Rebuilds from the same clean snapshot and configuration must be deterministic.
+
+Features, profile evidence and evaluation snapshots may use only events at or before their as-of cutoff. Future interactions must never contribute to historical aggregates, labels or recommendation evaluation. Temporal association alone does not prove intent.
+
+## 18. Optional Matrix-Factorization Experiment
+
+Matrix factorization is not the primary architecture and is disabled by default. It remains an optional experiment that may be activated only if evaluation on real data demonstrates sufficient collaborative signal and measurable value. No matrix-factorization code or fabricated evaluation metrics are included in this scaffold.
+
+## 19. Data and Evaluation Boundaries
+
+The actual dataset is authoritative. The inspected scaffold currently documents interaction identifiers user_id, wireid, docid and timestamp, and article key docid; no raw or clean data files were present during scaffold design. Any additional columns, event semantics, metadata, intent mappings and business rules require inspection and explicit configuration.
+
+Architecture specifications do not demonstrate that an algorithm works. Recommendation quality claims require real-data evaluation and documented methodology.
+
+## 20. AI Implementation Instruction
 
 An AI coding agent implementing this repository must first inspect:
 
@@ -235,4 +288,4 @@ If an actual data column contradicts an assumed placeholder, the real data shoul
 
 The agent must not invent business semantics.
 
-The agent must not implement feature engineering, recommendation models or recommendation serving in this preprocessing repository.
+The agent must not move feature engineering into preprocessing or implement assumptions unsupported by actual data.

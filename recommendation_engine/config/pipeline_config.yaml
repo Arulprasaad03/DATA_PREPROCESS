@@ -5,6 +5,8 @@
 project:
   name: recommendation_engine
   stage: preprocessing
+  preprocessing_status: current
+  recommendation_architecture: user_intelligence_affinity
 
 processing:
   mode: daily
@@ -27,6 +29,11 @@ paths:
   staging_article_metadata: data/staging/article_metadata
   clean_interactions: data/clean/interactions
   clean_article_metadata: data/clean/article_metadata
+  features_user: data/features/user
+  features_article: data/features/article
+  features_interaction: data/features/interaction
+  features_behavioral: data/features/behavioral
+  features_model_ready: data/features/model_ready
   quarantine_interactions: data/quarantine/interactions
   quarantine_article_metadata: data/quarantine/article_metadata
   manifests: data/manifests
@@ -40,9 +47,32 @@ monitoring:
   distribution_tracking: true
   drift_tracking: true
 
-future_modeling:
-  enabled: false
-  feature_engineering: false
-  embeddings: false
-  matrix_factorization: false
-  recommendation_generation: false
+stages:
+  preprocessing:
+    status: current
+    output: data/clean
+  feature_engineering:
+    status: next
+    enabled: true
+  user_intelligence:
+    status: next
+    enabled: true
+  affinity_model:
+    status: intended_core_model
+    enabled: true
+  rule_engine:
+    status: next
+    enabled: true
+  candidate_generation:
+    status: future
+    enabled: false
+  ranking:
+    status: future
+    enabled: false
+  reranking:
+    status: future
+    enabled: false
+  matrix_factorization:
+    enabled: false
+    experimental: true
+    activation_requires_evaluation: true

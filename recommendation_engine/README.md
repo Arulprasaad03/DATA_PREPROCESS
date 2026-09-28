@@ -1,10 +1,10 @@
-# Recommendation Engine - Data Preprocessing Pipeline
+# Recommendation Engine
 
 ## 1. Purpose
 
 This repository defines the production-style data ingestion, validation, cleaning, quarantine, monitoring and reporting layer for a recommendation engine.
 
-The current implementation scope is deliberately limited to data preprocessing.
+The existing preprocessing architecture remains responsible for producing clean data. Recommendation-stage directories and module specifications prepare the next stages; they do not claim that recommendation behavior has been implemented or evaluated.
 
 The project is designed for a system where historical interaction data already exists and new data will arrive regularly, potentially every day.
 
@@ -38,25 +38,15 @@ The current stage covers:
 - Full rebuild
 - Automated tests
 
-## 3. Explicitly Out of Scope
+## 3. Stage Boundaries
 
-The following must NOT be implemented in this preprocessing stage:
+Preprocessing ends at CLEAN DATA. Feature engineering and recommendation reasoning consume clean outputs in separate modules; they must not be mixed into cleaning.
 
-- Feature engineering
-- User embeddings
-- Article embeddings
-- Candidate generation
-- Ranking
-- Re-ranking
-- Matrix factorization
-- Model training
-- Model evaluation
-- Recommendation serving
-- Online recommendation APIs
+- Feature engineering must not be performed by preprocessing modules.
+- Raw data remains immutable; invalid data remains traceable through quarantine.
+- Recommendation-stage specifications are architectural preparation, not validated algorithms.
 
-These belong to later stages.
-
-## 4. Future High-Level Architecture
+## 4. Recommendation Architecture
 
 `	ext
 RAW DATA
@@ -82,19 +72,22 @@ CLEAN DATA
 FEATURE ENGINEERING
    |
    v
-MODEL-READY DATA
+USER INTELLIGENCE
    |
    v
-MATRIX FACTORIZATION
+USER BEHAVIORAL PROFILE
+   |
+   v
+AFFINITY MODEL
    |
    v
 CANDIDATE GENERATION
    |
    v
-RANKING
+RULE ENGINE
    |
    v
-RE-RANKING
+RANKING / RE-RANKING
    |
    v
 RECOMMENDATIONS
@@ -136,6 +129,7 @@ recommendation_engine/
 |   +-- pipeline_config.yaml
 |   +-- schema_config.yaml
 |   +-- business_rules.yaml
+|   +-- feature_config.yaml
 |
 +-- data/
 |   +-- raw/
@@ -150,6 +144,13 @@ recommendation_engine/
 |   |   +-- interactions/
 |   |   +-- article_metadata/
 |   |
+|   +-- features/
+|       +-- user/
+|       +-- article/
+|       +-- interaction/
+|       +-- behavioral/
+|       +-- model_ready/
+|
 |   +-- quarantine/
 |   |   +-- interactions/
 |   |   +-- article_metadata/
@@ -160,6 +161,10 @@ recommendation_engine/
 |   +-- ingestion/
 |   +-- validation/
 |   +-- cleaning/
+|   +-- features/
+|   +-- user_intelligence/
+|   +-- modeling/affinity/
+|   +-- modeling/rules/
 |   +-- monitoring/
 |   +-- pipeline/
 |   +-- utils/
@@ -371,6 +376,8 @@ Configuration belongs primarily in:
 
 The implementation should read these files rather than hard-code thresholds unnecessarily.
 
+eature_config.yaml contains architecture defaults and experimental parameters, not validated model weights or assumed source fields.
+
 ## 18. AI Coding Agent Instructions
 
 Before implementing anything, the coding agent must:
@@ -394,20 +401,21 @@ The coding agent must:
 - Preserve quarantine traceability.
 - Avoid silent row deletion.
 - Avoid invented business rules.
-- Avoid feature engineering at this stage.
-- Avoid model training at this stage.
+- Keep feature engineering outside preprocessing and consume clean data only.
+- Do not claim recommendation algorithms are validated until evaluated on real data.
 
-## 19. Future Recommendation Stage
+## 19. User Intelligence and Affinity
 
-After preprocessing is stable, the project can progress to:
+The core reasoning layer models why observed behavior may form a pattern, rather than only matching an article's surface similarity.
 
-1. Feature engineering
-2. User/item interaction representation
-3. Matrix factorization
-4. Candidate generation
-5. Ranking
-6. Re-ranking
-7. Evaluation
-8. Recommendation serving
+Profiles keep OBSERVED interactions, DERIVED behavioral patterns and INFERRED candidate interests separate, with evidence, confidence and time context.
 
-Those stages should consume the clean, validated dataset rather than directly consuming raw files.
+Intent is inferred, not observed; it must never be presented as a confirmed personal or psychological fact. Configurable behavioral relationships may connect non-identical behaviors, but no relationship mapping is assumed until supported by inspected data and configuration.
+
+Affinity combines interpretable configured components and preserves their contributions. The rule engine separately decides candidate eligibility and records each decision. Candidate generation, ranking and re-ranking are later stages after affinity and eligibility.
+
+Daily profile updates should consume newly cleaned interactions using a recorded as-of cutoff, update evidence deterministically, and prevent future interactions from leaking into historical features or evaluations.
+
+Matrix factorization is an optional future experiment, disabled by default. It may be activated only after evaluation of real data demonstrates sufficient collaborative signal and measurable value.
+
+No recommendation quality or performance claim is made by this architecture scaffold.

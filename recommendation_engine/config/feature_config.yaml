@@ -1,0 +1,50 @@
+# Experimental architecture defaults; values are not validated model parameters.
+feature_engineering:
+  enabled: true
+  deterministic: true
+  input_layer: data/clean
+  output_root: data/features
+  as_of_timestamp: null
+
+time_windows:
+  recent_days: 7
+  medium_days: 30
+  long_term_days: 180
+
+columns:
+  user_id: user_id
+  article_id: docid
+  timestamp: timestamp
+  event_type: null
+  article_metadata_fields: []
+
+interaction_strength:
+  default_strength: 1.0
+  event_weights: {}
+  repeated_interactions_are_valid: true
+
+user_intelligence:
+  enabled: true
+  history_analysis: true
+  behavior_analysis: true
+  intent_detection: true
+  preference_profiling: true
+  behavior_relationships: true
+  candidate_intent_rules: []
+  behavioral_relationship_rules: []
+
+affinity:
+  enabled: true
+  weight_version: experimental-v1
+  weights_are_validated: false
+  direct_preference_weight: 1.0
+  behavioral_relationship_weight: 1.0
+  recency_weight: 1.0
+  interaction_strength_weight: 1.0
+  persistence_weight: 1.0
+  intent_relevance_weight: 1.0
+
+matrix_factorization:
+  enabled: false
+  experimental: true
+  activation_requires_evaluation: true

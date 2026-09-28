@@ -11,6 +11,7 @@ env/
 # Runtime data
 data/staging/*
 data/clean/*
+data/features/*
 data/quarantine/*
 data/manifests/*
 logs/*
@@ -19,6 +20,16 @@ reports/*
 # Keep folder structure
 !data/staging/.gitkeep
 !data/clean/.gitkeep
+!data/features/user/
+!data/features/article/
+!data/features/interaction/
+!data/features/behavioral/
+!data/features/model_ready/
+!data/features/user/.gitkeep
+!data/features/article/.gitkeep
+!data/features/interaction/.gitkeep
+!data/features/behavioral/.gitkeep
+!data/features/model_ready/.gitkeep
 !data/quarantine/.gitkeep
 !data/manifests/.gitkeep
 !logs/.gitkeep

@@ -57,11 +57,17 @@ function New-Dir {
 function Write-ProjectFile {
     param(
         [string]$RelativePath,
-        [string]$Content
+        [string]$Content,
+        [switch]$Overwrite
     )
 
     $fullPath = Join-Path $root $RelativePath
     $parent = Split-Path -Parent $fullPath
+
+    if ((Test-Path -LiteralPath $fullPath) -and -not $Overwrite) {
+        Write-Host "  Preserved: $RelativePath" -ForegroundColor DarkYellow
+        return
+    }
 
     if ($parent) {
         New-Dir $parent
@@ -96,6 +102,13 @@ $directories = @(
     "data\clean\interactions",
     "data\clean\article_metadata",
 
+    "data\features",
+    "data\features\user",
+    "data\features\article",
+    "data\features\interaction",
+    "data\features\behavioral",
+    "data\features\model_ready",
+
     "data\quarantine",
     "data\quarantine\interactions",
     "data\quarantine\article_metadata",
@@ -106,6 +119,11 @@ $directories = @(
     "src\ingestion",
     "src\validation",
     "src\cleaning",
+    "src\features",
+    "src\user_intelligence",
+    "src\modeling",
+    "src\modeling\affinity",
+    "src\modeling\rules",
     "src\monitoring",
     "src\pipeline",
     "src\utils",
@@ -795,6 +813,298 @@ $specs = @(
             "Test failed-run handling.",
             "Test backfill and full-run orchestration."
         )
+    },
+
+    # --------------------------------------------------------
+    # FEATURE ENGINEERING
+    # --------------------------------------------------------
+
+    [PSCustomObject]@{
+        Path = "src\features\__init__.py"
+        Purpose = "Expose the feature-engineering package without coupling it to preprocessing."
+        Requirements = @("Feature engineering consumes clean datasets only.")
+    },
+
+    [PSCustomObject]@{
+        Path = "src\features\user_features.py"
+        Purpose = "Build user-level activity features without inferring intent."
+        Requirements = @(
+            "Measure interaction frequency, diversity, recency, recent activity and historical activity using observed fields only.",
+            "Read user, article and timestamp columns from configuration based on the inspected schema.",
+            "Do not infer intent or psychological, demographic or personal attributes.",
+            "Preserve user identifiers and deterministic output."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\features\article_features.py"
+        Purpose = "Represent article metadata using only fields actually present in clean metadata."
+        Requirements = @(
+            "Preserve docid as the article key.",
+            "Select metadata fields through configuration after inspecting the real dataset.",
+            "Do not invent metadata fields or create embeddings."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\features\interaction_features.py"
+        Purpose = "Represent observed interaction strength using configurable semantics."
+        Requirements = @(
+            "Use configured event-strength mappings only when an event field and its values have been verified.",
+            "Do not treat repeated interactions as duplicates by default.",
+            "Retain user_id, docid, timestamp and traceable source keys where available."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\features\temporal_features.py"
+        Purpose = "Derive reproducible time-window, recency and sequence features."
+        Requirements = @(
+            "Use a configured as-of time and configured recent, medium and long-term windows.",
+            "Prevent future events from contributing to historical snapshots.",
+            "Represent sequences in chronological order with deterministic tie handling.",
+            "Do not claim temporal correlation proves intent."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\features\aggregation_features.py"
+        Purpose = "Build deterministic user, article and interaction aggregates."
+        Requirements = @(
+            "Support configured time windows and aggregation keys.",
+            "Use an explicit as-of cutoff to prevent temporal leakage.",
+            "Do not discard repeated interactions unless an explicit rule requires it."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\features\feature_validation.py"
+        Purpose = "Validate generated feature datasets before they are written."
+        Requirements = @(
+            "Check configured datatypes, missing values, infinite values, key uniqueness and configured ranges.",
+            "Check feature timestamps against the as-of cutoff for temporal leakage.",
+            "Check deterministic output for identical inputs and configuration.",
+            "Return structured issues without silently changing or dropping rows."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\features\feature_pipeline.py"
+        Purpose = "Orchestrate feature generation from clean data into data/features."
+        Requirements = @(
+            "Consume data/clean only and never read raw data as a feature source.",
+            "Coordinate user, article, interaction, temporal and aggregate feature modules.",
+            "Write configured outputs below data/features/user, article, interaction, behavioral and model_ready.",
+            "Support deterministic daily updates and preserve run/as-of metadata.",
+            "Do not modify preprocessing outputs or raw data."
+        )
+    },
+
+    # --------------------------------------------------------
+    # USER INTELLIGENCE
+    # --------------------------------------------------------
+
+    [PSCustomObject]@{
+        Path = "src\user_intelligence\__init__.py"
+        Purpose = "Expose the user-intelligence reasoning package."
+        Requirements = @("Keep observed, derived and inferred information distinguishable.")
+    },
+
+    [PSCustomObject]@{
+        Path = "src\user_intelligence\history_analyzer.py"
+        Purpose = "Analyze each user's chronological interaction history with evidence."
+        Requirements = @(
+            "Identify repeated, recent, persistent, changing and isolated behavior plus long-term versus recent patterns.",
+            "Retain supporting interaction references and time context for every derived pattern.",
+            "Use only configured, verified input fields."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\user_intelligence\behavior_analyzer.py"
+        Purpose = "Identify recurring behavioral structures and their evidence strength."
+        Requirements = @(
+            "Analyze configured patterns, sequences, transitions, frequency, persistence, recency and behavior relationships.",
+            "Distinguish strong from weak evidence using explicit configurable criteria.",
+            "Keep behavior analysis separate from intent inference."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\user_intelligence\intent_detector.py"
+        Purpose = "Produce evidence-backed candidate intents as uncertain inferences."
+        Requirements = @(
+            "Represent candidate_intent, evidence, confidence, supporting_interactions and time_context.",
+            "Allow multiple candidate intents and time-varying strength.",
+            "Never represent inferred intent as a confirmed personal, psychological or demographic fact.",
+            "Do not hard-code domain concepts; use configured/evolved relationship definitions."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\user_intelligence\preference_profiler.py"
+        Purpose = "Build an evidence-preserving profile of persistent, emerging, recent and uncertain preferences."
+        Requirements = @(
+            "Consider configured frequency, diversity, recency, persistence and interaction-strength signals.",
+            "Label evidence quality and preserve supporting observations.",
+            "Do not collapse the profile into one opaque score."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\user_intelligence\behavior_relationships.py"
+        Purpose = "Connect behaviorally related but non-identical signals through configurable relationships."
+        Requirements = @(
+            "Support direct similarity and higher-level behavioral relationships.",
+            "Load relationship rules or mappings from configuration; keep unconfigured mappings empty.",
+            "Return relationship evidence, provenance and confidence rather than assuming surface text identity.",
+            "Do not hard-code example topics or infer unsupported semantics from unavailable metadata."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\user_intelligence\user_profile_builder.py"
+        Purpose = "Build a versioned, interpretable profile from user-intelligence outputs."
+        Requirements = @(
+            "Combine history, behavior, candidate intents, preferences, behavior relationships, recency and evidence.",
+            "Keep OBSERVED, DERIVED and INFERRED sections explicitly separate.",
+            "Attach profile version, as-of time and provenance to generated profiles.",
+            "Do not reduce all concepts to one opaque preference value."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\user_intelligence\user_intelligence_pipeline.py"
+        Purpose = "Orchestrate deterministic daily user-profile updates."
+        Requirements = @(
+            "Run history, behavior, intent, preference, behavioral-relationship and profile-building stages in order.",
+            "Support incremental daily updates while allowing deterministic rebuilds from clean data.",
+            "Preserve evidence and as-of boundaries.",
+            "Do not perform final recommendation ranking."
+        )
+    },
+
+    # --------------------------------------------------------
+    # AFFINITY AND RULE ENGINE
+    # --------------------------------------------------------
+
+    [PSCustomObject]@{
+        Path = "src\modeling\__init__.py"
+        Purpose = "Expose recommendation modeling components while keeping affinity and rules separate."
+        Requirements = @("Do not make matrix factorization the default model.")
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\affinity\__init__.py"
+        Purpose = "Expose interpretable user-to-article affinity components."
+        Requirements = @("Keep configurable affinity distinct from eligibility rules.")
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\affinity\affinity_calculator.py"
+        Purpose = "Calculate interpretable user-to-article affinity components."
+        Requirements = @(
+            "Support direct preference, behavioral relationship, recency, interaction strength, persistence and supported intent relevance.",
+            "Read versioned experimental weights from configuration and preserve component contributions.",
+            "Do not describe placeholder weights as scientifically validated."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\affinity\affinity_matrix.py"
+        Purpose = "Represent user-article affinity efficiently without unnecessary dense matrices."
+        Requirements = @(
+            "Support sparse representation, user IDs, article IDs and incremental updates.",
+            "Preserve deterministic keys and configured storage semantics."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\affinity\affinity_weights.py"
+        Purpose = "Load and audit versioned affinity weights."
+        Requirements = @(
+            "Centralize configurable experimental weights.",
+            "Record version and provenance; do not silently tune weights."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\affinity\affinity_model.py"
+        Purpose = "Provide deterministic single, batch and incremental affinity scoring."
+        Requirements = @(
+            "Accept a user profile and article representation and return score, component contributions and evidence metadata.",
+            "Support configured thresholds and deterministic ordering.",
+            "Keep eligibility decisions outside the affinity model."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\rules\__init__.py"
+        Purpose = "Expose auditable recommendation eligibility and business rules."
+        Requirements = @("Rules remain separate from affinity calculation.")
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\rules\rule_engine.py"
+        Purpose = "Evaluate configured candidate rules and return an audit trail."
+        Requirements = @(
+            "Return passed/failed, rule ID, reason and affected candidate for every decision.",
+            "Support rule priority and enable/disable configuration.",
+            "Do not mix rule decisions into affinity scores."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\rules\eligibility_rules.py"
+        Purpose = "Evaluate explicitly configured candidate eligibility constraints."
+        Requirements = @(
+            "Provide interfaces for consumed-article exclusion, freshness and user-specific constraints only when configured.",
+            "Do not invent default business rules or freshness windows.",
+            "Make every decision auditable."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "src\modeling\rules\business_rules.py"
+        Purpose = "Apply configurable recommendation business rules after affinity scoring."
+        Requirements = @(
+            "Support rule priority, enable/disable settings and an audit trail.",
+            "Keep business policy separate from affinity calculation.",
+            "Apply only explicitly configured rules."
+        )
+    },
+
+    # --------------------------------------------------------
+    # RECOMMENDATION-STAGE TEST SPECIFICATIONS
+    # --------------------------------------------------------
+
+    [PSCustomObject]@{
+        Path = "tests\test_features.py"
+        Purpose = "Specify tests for feature generation, validation and temporal correctness."
+        Requirements = @(
+            "Test feature generation, validation, deterministic execution and aggregate correctness.",
+            "Test temporal leakage prevention using explicit as-of cutoffs.",
+            "Test repeated interactions are retained unless an explicit rule says otherwise."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "tests\test_user_intelligence.py"
+        Purpose = "Specify tests for evidence-backed user-intelligence behavior."
+        Requirements = @(
+            "Test history, repeated behavior, recency, persistence, intent confidence and preference profiling.",
+            "Test configurable behavioral relationships, evidence preservation and deterministic profiles.",
+            "Test that OBSERVED, DERIVED and INFERRED information remains distinct."
+        )
+    },
+
+    [PSCustomObject]@{
+        Path = "tests\test_affinity.py"
+        Purpose = "Specify tests for interpretable affinity and configurable weights."
+        Requirements = @(
+            "Test direct preference, behavioral relationship, recency and interaction-strength components.",
+            "Test component contributions, deterministic scores and configurable weights."
+        )
     }
 )
 
@@ -878,6 +1188,8 @@ $pipelineConfig = @(
     "project:",
     "  name: recommendation_engine",
     "  stage: preprocessing",
+    "  preprocessing_status: current",
+    "  recommendation_architecture: user_intelligence_affinity",
     "",
     "processing:",
     "  mode: daily",
@@ -900,6 +1212,11 @@ $pipelineConfig = @(
     "  staging_article_metadata: data/staging/article_metadata",
     "  clean_interactions: data/clean/interactions",
     "  clean_article_metadata: data/clean/article_metadata",
+    "  features_user: data/features/user",
+    "  features_article: data/features/article",
+    "  features_interaction: data/features/interaction",
+    "  features_behavioral: data/features/behavioral",
+    "  features_model_ready: data/features/model_ready",
     "  quarantine_interactions: data/quarantine/interactions",
     "  quarantine_article_metadata: data/quarantine/article_metadata",
     "  manifests: data/manifests",
@@ -913,15 +1230,93 @@ $pipelineConfig = @(
     "  distribution_tracking: true",
     "  drift_tracking: true",
     "",
-    "future_modeling:",
-    "  enabled: false",
-    "  feature_engineering: false",
-    "  embeddings: false",
-    "  matrix_factorization: false",
-    "  recommendation_generation: false"
+    "stages:",
+    "  preprocessing:",
+    "    status: current",
+    "    output: data/clean",
+    "  feature_engineering:",
+    "    status: next",
+    "    enabled: true",
+    "  user_intelligence:",
+    "    status: next",
+    "    enabled: true",
+    "  affinity_model:",
+    "    status: intended_core_model",
+    "    enabled: true",
+    "  rule_engine:",
+    "    status: next",
+    "    enabled: true",
+    "  candidate_generation:",
+    "    status: future",
+    "    enabled: false",
+    "  ranking:",
+    "    status: future",
+    "    enabled: false",
+    "  reranking:",
+    "    status: future",
+    "    enabled: false",
+    "  matrix_factorization:",
+    "    enabled: false",
+    "    experimental: true",
+    "    activation_requires_evaluation: true"
 )
 
-Write-ProjectFile "config\pipeline_config.yaml" ($pipelineConfig -join "`r`n")
+Write-ProjectFile "config\pipeline_config.yaml" ($pipelineConfig -join "`r`n") -Overwrite
+
+$featureConfig = @(
+    "# Experimental architecture defaults; values are not validated model parameters.",
+    "feature_engineering:",
+    "  enabled: true",
+    "  deterministic: true",
+    "  input_layer: data/clean",
+    "  output_root: data/features",
+    "  as_of_timestamp: null",
+    "",
+    "time_windows:",
+    "  recent_days: 7",
+    "  medium_days: 30",
+    "  long_term_days: 180",
+    "",
+    "columns:",
+    "  user_id: user_id",
+    "  article_id: docid",
+    "  timestamp: timestamp",
+    "  event_type: null",
+    "  article_metadata_fields: []",
+    "",
+    "interaction_strength:",
+    "  default_strength: 1.0",
+    "  event_weights: {}",
+    "  repeated_interactions_are_valid: true",
+    "",
+    "user_intelligence:",
+    "  enabled: true",
+    "  history_analysis: true",
+    "  behavior_analysis: true",
+    "  intent_detection: true",
+    "  preference_profiling: true",
+    "  behavior_relationships: true",
+    "  candidate_intent_rules: []",
+    "  behavioral_relationship_rules: []",
+    "",
+    "affinity:",
+    "  enabled: true",
+    "  weight_version: experimental-v1",
+    "  weights_are_validated: false",
+    "  direct_preference_weight: 1.0",
+    "  behavioral_relationship_weight: 1.0",
+    "  recency_weight: 1.0",
+    "  interaction_strength_weight: 1.0",
+    "  persistence_weight: 1.0",
+    "  intent_relevance_weight: 1.0",
+    "",
+    "matrix_factorization:",
+    "  enabled: false",
+    "  experimental: true",
+    "  activation_requires_evaluation: true"
+)
+
+Write-ProjectFile "config\feature_config.yaml" ($featureConfig -join "`r`n")
 
 $schemaConfig = @(
     "# ============================================================",
@@ -1019,13 +1414,13 @@ Write-ProjectFile "config\business_rules.yaml" ($businessRulesConfig -join "`r`n
 # ============================================================
 
 $readme = @(
-    "# Recommendation Engine - Data Preprocessing Pipeline",
+    "# Recommendation Engine",
     "",
     "## 1. Purpose",
     "",
     "This repository defines the production-style data ingestion, validation, cleaning, quarantine, monitoring and reporting layer for a recommendation engine.",
     "",
-    "The current implementation scope is deliberately limited to data preprocessing.",
+    "The existing preprocessing architecture remains responsible for producing clean data. Recommendation-stage directories and module specifications prepare the next stages; they do not claim that recommendation behavior has been implemented or evaluated.",
     "",
     "The project is designed for a system where historical interaction data already exists and new data will arrive regularly, potentially every day.",
     "",
@@ -1059,25 +1454,15 @@ $readme = @(
     "- Full rebuild",
     "- Automated tests",
     "",
-    "## 3. Explicitly Out of Scope",
+    "## 3. Stage Boundaries",
     "",
-    "The following must NOT be implemented in this preprocessing stage:",
+    "Preprocessing ends at CLEAN DATA. Feature engineering and recommendation reasoning consume clean outputs in separate modules; they must not be mixed into cleaning.",
     "",
-    "- Feature engineering",
-    "- User embeddings",
-    "- Article embeddings",
-    "- Candidate generation",
-    "- Ranking",
-    "- Re-ranking",
-    "- Matrix factorization",
-    "- Model training",
-    "- Model evaluation",
-    "- Recommendation serving",
-    "- Online recommendation APIs",
+    "- Feature engineering must not be performed by preprocessing modules.",
+    "- Raw data remains immutable; invalid data remains traceable through quarantine.",
+    "- Recommendation-stage specifications are architectural preparation, not validated algorithms.",
     "",
-    "These belong to later stages.",
-    "",
-    "## 4. Future High-Level Architecture",
+    "## 4. Recommendation Architecture",
     "",
     "```text",
     "RAW DATA",
@@ -1103,19 +1488,22 @@ $readme = @(
     "FEATURE ENGINEERING",
     "   |",
     "   v",
-    "MODEL-READY DATA",
+    "USER INTELLIGENCE",
     "   |",
     "   v",
-    "MATRIX FACTORIZATION",
+    "USER BEHAVIORAL PROFILE",
+    "   |",
+    "   v",
+    "AFFINITY MODEL",
     "   |",
     "   v",
     "CANDIDATE GENERATION",
     "   |",
     "   v",
-    "RANKING",
+    "RULE ENGINE",
     "   |",
     "   v",
-    "RE-RANKING",
+    "RANKING / RE-RANKING",
     "   |",
     "   v",
     "RECOMMENDATIONS",
@@ -1157,6 +1545,7 @@ $readme = @(
     "|   +-- pipeline_config.yaml",
     "|   +-- schema_config.yaml",
     "|   +-- business_rules.yaml",
+    "|   +-- feature_config.yaml",
     "|",
     "+-- data/",
     "|   +-- raw/",
@@ -1171,6 +1560,13 @@ $readme = @(
     "|   |   +-- interactions/",
     "|   |   +-- article_metadata/",
     "|   |",
+    "|   +-- features/",
+    "|       +-- user/",
+    "|       +-- article/",
+    "|       +-- interaction/",
+    "|       +-- behavioral/",
+    "|       +-- model_ready/",
+    "|",
     "|   +-- quarantine/",
     "|   |   +-- interactions/",
     "|   |   +-- article_metadata/",
@@ -1181,6 +1577,10 @@ $readme = @(
     "|   +-- ingestion/",
     "|   +-- validation/",
     "|   +-- cleaning/",
+    "|   +-- features/",
+    "|   +-- user_intelligence/",
+    "|   +-- modeling/affinity/",
+    "|   +-- modeling/rules/",
     "|   +-- monitoring/",
     "|   +-- pipeline/",
     "|   +-- utils/",
@@ -1392,6 +1792,8 @@ $readme = @(
     "",
     "The implementation should read these files rather than hard-code thresholds unnecessarily.",
     "",
+    "`feature_config.yaml` contains architecture defaults and experimental parameters, not validated model weights or assumed source fields.",
+    "",
     "## 18. AI Coding Agent Instructions",
     "",
     "Before implementing anything, the coding agent must:",
@@ -1415,27 +1817,28 @@ $readme = @(
     "- Preserve quarantine traceability.",
     "- Avoid silent row deletion.",
     "- Avoid invented business rules.",
-    "- Avoid feature engineering at this stage.",
-    "- Avoid model training at this stage.",
+    "- Keep feature engineering outside preprocessing and consume clean data only.",
+    "- Do not claim recommendation algorithms are validated until evaluated on real data.",
     "",
-    "## 19. Future Recommendation Stage",
+    "## 19. User Intelligence and Affinity",
     "",
-    "After preprocessing is stable, the project can progress to:",
+    "The core reasoning layer models why observed behavior may form a pattern, rather than only matching an article's surface similarity.",
     "",
-    "1. Feature engineering",
-    "2. User/item interaction representation",
-    "3. Matrix factorization",
-    "4. Candidate generation",
-    "5. Ranking",
-    "6. Re-ranking",
-    "7. Evaluation",
-    "8. Recommendation serving",
+    "Profiles keep OBSERVED interactions, DERIVED behavioral patterns and INFERRED candidate interests separate, with evidence, confidence and time context.",
     "",
-    "Those stages should consume the clean, validated dataset rather than directly consuming raw files.",
+    "Intent is inferred, not observed; it must never be presented as a confirmed personal or psychological fact. Configurable behavioral relationships may connect non-identical behaviors, but no relationship mapping is assumed until supported by inspected data and configuration.",
+    "",
+    "Affinity combines interpretable configured components and preserves their contributions. The rule engine separately decides candidate eligibility and records each decision. Candidate generation, ranking and re-ranking are later stages after affinity and eligibility.",
+    "",
+    "Daily profile updates should consume newly cleaned interactions using a recorded as-of cutoff, update evidence deterministically, and prevent future interactions from leaking into historical features or evaluations.",
+    "",
+    "Matrix factorization is an optional future experiment, disabled by default. It may be activated only after evaluation of real data demonstrates sufficient collaborative signal and measurable value.",
+    "",
+    "No recommendation quality or performance claim is made by this architecture scaffold.",
     ""
 )
 
-Write-ProjectFile "README.md" ($readme -join "`r`n")
+Write-ProjectFile "README.md" ($readme -join "`r`n") -Overwrite
 
 # ============================================================
 # DESIGN DOCUMENT
@@ -1633,37 +2036,90 @@ $design = @(
     "- Sudden changes in unique-article counts",
     "- Sudden changes in referential-integrity coverage",
     "",
-    "## 13. Future Recommendation System",
+    "## 13. Recommendation Architecture",
     "",
-    "The clean dataset will later become the input to a separate modeling layer.",
-    "",
-    "That later layer may contain:",
+    "Preprocessing remains unchanged and ends at CLEAN DATA. Separate recommendation stages consume clean outputs:",
     "",
     "```text",
-    "Clean data",
+    "CLEAN DATA",
     "    |",
     "    v",
-    "Feature engineering",
+    "FEATURE ENGINEERING",
     "    |",
     "    v",
-    "Model-ready interactions",
+    "USER INTELLIGENCE",
+    "    +-- History Analysis",
+    "    +-- Behavior Analysis",
+    "    +-- Intent Discovery",
+    "    +-- Preference Profiling",
+    "    +-- Behavioral Relationships",
     "    |",
     "    v",
-    "Matrix factorization",
+    "USER BEHAVIORAL PROFILE",
     "    |",
     "    v",
-    "Candidate generation",
+    "AFFINITY ENGINE",
     "    |",
     "    v",
-    "Ranking",
+    "CANDIDATE GENERATION",
     "    |",
     "    v",
-    "Re-ranking",
+    "RULE ENGINE",
+    "    |",
+    "    v",
+    "RANKING / RE-RANKING",
+    "    |",
+    "    v",
+    "RECOMMENDATIONS",
     '```',
     "",
-    "This repository deliberately stops before that stage.",
+    "Feature engineering uses only actual inspected clean-data columns and metadata. It preserves user_id/docid/timestamp keys, repeated interaction evidence and an explicit as-of cutoff. Article features may use only real metadata fields; no embeddings or invented columns are assumed.",
     "",
-    "## 14. AI Implementation Instruction",
+    "## 14. User Intelligence and Inference",
+    "",
+    "User intelligence is the core reasoning layer: it analyzes chronological history and recurring patterns, then builds an interpretable profile that can explain affinities beyond exact article similarity.",
+    "",
+    "The profile distinguishes:",
+    "",
+    "- OBSERVED: source interactions and their timestamps/identifiers.",
+    "- DERIVED: recurring behavior patterns calculated from observations.",
+    "- INFERRED: candidate preferences or intents that may explain patterns.",
+    "- MODEL SIGNAL: configured affinity contribution from supported evidence.",
+    "- RULE: an auditable eligibility decision independent of affinity.",
+    "",
+    "Intent is inferred rather than directly observed. Every candidate intent must carry evidence, confidence, supporting interaction references and time context. It is never a confirmed psychological, demographic or personal fact; multiple candidates and changing strength are allowed.",
+    "",
+    "## 15. Behavioral Relationships and Preferences",
+    "",
+    "Relationship logic supports direct similarity and higher-level connections between non-identical behaviors. It must be configuration-driven and auditable; empty configuration means no asserted domain relationships. Example topics are illustrative, not hard-coded rules.",
+    "",
+    "Preference profiles distinguish persistent, emerging, recent and weak/uncertain signals, preserve evidence, and avoid one opaque preference score.",
+    "",
+    "## 16. Affinity and Rules",
+    "",
+    "Affinity combines configurable, interpretable components such as direct preference, behavioral relationship, recency, interaction strength, persistence and supported intent relevance. Component contributions, weight version and evidence are retained. Initial weights are experimental placeholders, not scientifically validated parameters, and must not be silently tuned.",
+    "",
+    "The rule engine remains separate: it determines candidate eligibility, returns passed/failed status, rule ID, reason and affected candidate, and preserves priority/configuration audit details. No consumed-item, freshness or business policy is assumed unless explicitly configured.",
+    "",
+    "Candidate generation follows user profile and affinity. Ranking and re-ranking are later stages and are not implemented by the intelligence pipeline.",
+    "",
+    "## 17. Daily Profile Updates and Temporal Safety",
+    "",
+    "Daily updates consume newly cleaned records, preserve prior evidence/profile versions, and record an as-of timestamp. Rebuilds from the same clean snapshot and configuration must be deterministic.",
+    "",
+    "Features, profile evidence and evaluation snapshots may use only events at or before their as-of cutoff. Future interactions must never contribute to historical aggregates, labels or recommendation evaluation. Temporal association alone does not prove intent.",
+    "",
+    "## 18. Optional Matrix-Factorization Experiment",
+    "",
+    "Matrix factorization is not the primary architecture and is disabled by default. It remains an optional experiment that may be activated only if evaluation on real data demonstrates sufficient collaborative signal and measurable value. No matrix-factorization code or fabricated evaluation metrics are included in this scaffold.",
+    "",
+    "## 19. Data and Evaluation Boundaries",
+    "",
+    "The actual dataset is authoritative. The inspected scaffold currently documents interaction identifiers user_id, wireid, docid and timestamp, and article key docid; no raw or clean data files were present during scaffold design. Any additional columns, event semantics, metadata, intent mappings and business rules require inspection and explicit configuration.",
+    "",
+    "Architecture specifications do not demonstrate that an algorithm works. Recommendation quality claims require real-data evaluation and documented methodology.",
+    "",
+    "## 20. AI Implementation Instruction",
     "",
     "An AI coding agent implementing this repository must first inspect:",
     "",
@@ -1679,11 +2135,11 @@ $design = @(
     "",
     "The agent must not invent business semantics.",
     "",
-    "The agent must not implement feature engineering, recommendation models or recommendation serving in this preprocessing repository.",
+    "The agent must not move feature engineering into preprocessing or implement assumptions unsupported by actual data.",
     ""
 )
 
-Write-ProjectFile "docs\data_pipeline_design.md" ($design -join "`r`n")
+Write-ProjectFile "docs\data_pipeline_design.md" ($design -join "`r`n") -Overwrite
 
 # ============================================================
 # REQUIREMENTS
@@ -1719,6 +2175,7 @@ $gitignore = @(
     "# Runtime data",
     "data/staging/*",
     "data/clean/*",
+    "data/features/*",
     "data/quarantine/*",
     "data/manifests/*",
     "logs/*",
@@ -1727,13 +2184,23 @@ $gitignore = @(
     "# Keep folder structure",
     "!data/staging/.gitkeep",
     "!data/clean/.gitkeep",
+    "!data/features/user/",
+    "!data/features/article/",
+    "!data/features/interaction/",
+    "!data/features/behavioral/",
+    "!data/features/model_ready/",
+    "!data/features/user/.gitkeep",
+    "!data/features/article/.gitkeep",
+    "!data/features/interaction/.gitkeep",
+    "!data/features/behavioral/.gitkeep",
+    "!data/features/model_ready/.gitkeep",
     "!data/quarantine/.gitkeep",
     "!data/manifests/.gitkeep",
     "!logs/.gitkeep",
     "!reports/.gitkeep"
 )
 
-Write-ProjectFile ".gitignore" ($gitignore -join "`r`n")
+Write-ProjectFile ".gitignore" ($gitignore -join "`r`n") -Overwrite
 
 # ============================================================
 # PACKAGE INIT FILES
@@ -1746,7 +2213,12 @@ $initFiles = @(
     "src\cleaning\__init__.py",
     "src\monitoring\__init__.py",
     "src\pipeline\__init__.py",
-    "src\utils\__init__.py"
+    "src\utils\__init__.py",
+    "src\features\__init__.py",
+    "src\user_intelligence\__init__.py",
+    "src\modeling\__init__.py",
+    "src\modeling\affinity\__init__.py",
+    "src\modeling\rules\__init__.py"
 )
 
 foreach ($init in $initFiles) {
@@ -1766,6 +2238,11 @@ $gitkeepDirs = @(
     "data\staging\article_metadata",
     "data\clean\interactions",
     "data\clean\article_metadata",
+    "data\features\user",
+    "data\features\article",
+    "data\features\interaction",
+    "data\features\behavioral",
+    "data\features\model_ready",
     "data\quarantine\interactions",
     "data\quarantine\article_metadata",
     "data\manifests",
@@ -1839,6 +2316,7 @@ $requiredFiles = @(
     "config\pipeline_config.yaml",
     "config\schema_config.yaml",
     "config\business_rules.yaml",
+    "config\feature_config.yaml",
     "docs\data_pipeline_design.md"
 )
 
