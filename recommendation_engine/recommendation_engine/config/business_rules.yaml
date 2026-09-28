@@ -1,0 +1,40 @@
+# ============================================================
+# BUSINESS RULE CONFIGURATION
+# ============================================================
+#
+# IMPORTANT:
+# These are intentionally conservative placeholders.
+# Replace or extend them only after the actual business
+# requirements and source-data semantics are confirmed.
+# ============================================================
+
+rules:
+  missing_required_identifier:
+    enabled: true
+    severity: blocking
+    action: quarantine
+
+  invalid_timestamp:
+    enabled: true
+    severity: blocking
+    action: quarantine
+
+  unresolved_article_reference:
+    enabled: true
+    severity: warning
+    action: report
+
+  duplicate_article_key:
+    enabled: true
+    severity: blocking
+    action: quarantine
+
+  unexpected_category:
+    enabled: true
+    severity: warning
+    action: report
+
+thresholds:
+  maximum_missingness_warning_percent: 10
+  maximum_quarantine_warning_percent: 5
+  minimum_referential_integrity_percent: 95

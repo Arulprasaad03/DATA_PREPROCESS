@@ -1,0 +1,41 @@
+# ============================================================
+# SCHEMA CONFIGURATION
+# ============================================================
+#
+# IMPORTANT:
+# Replace placeholders with the real schema after inspecting
+# the incoming datasets.
+# Do not invent fields that do not exist in the source data.
+# ============================================================
+
+interaction_schema:
+  required_columns:
+    - user_id
+    - wireid
+    - docid
+    - timestamp
+
+  optional_columns: []
+
+  identifiers:
+    user_id:
+      required: true
+    wireid:
+      required: true
+    docid:
+      required: true
+
+article_metadata_schema:
+  required_columns:
+    - docid
+
+  optional_columns: []
+
+timestamp:
+  timezone: Asia/Kolkata
+  allow_future: false
+
+schema_policy:
+  reject_missing_required_columns: true
+  warn_unexpected_columns: true
+  fail_on_incompatible_datatype: true

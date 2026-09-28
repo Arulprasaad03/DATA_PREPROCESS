@@ -1,0 +1,48 @@
+# ============================================================
+# PIPELINE CONFIGURATION
+# ============================================================
+
+project:
+  name: recommendation_engine
+  stage: preprocessing
+
+processing:
+  mode: daily
+  timezone: Asia/Kolkata
+  idempotent: true
+  preserve_raw: true
+  quarantine_invalid: true
+
+formats:
+  preferred_intermediate: parquet
+  supported_input:
+    - csv
+    - xlsx
+    - xls
+
+paths:
+  raw_interactions: data/raw/interactions
+  raw_article_metadata: data/raw/article_metadata
+  staging_interactions: data/staging/interactions
+  staging_article_metadata: data/staging/article_metadata
+  clean_interactions: data/clean/interactions
+  clean_article_metadata: data/clean/article_metadata
+  quarantine_interactions: data/quarantine/interactions
+  quarantine_article_metadata: data/quarantine/article_metadata
+  manifests: data/manifests
+  reports: reports
+  logs: logs
+
+monitoring:
+  enabled: true
+  row_count_tracking: true
+  rejection_tracking: true
+  distribution_tracking: true
+  drift_tracking: true
+
+future_modeling:
+  enabled: false
+  feature_engineering: false
+  embeddings: false
+  matrix_factorization: false
+  recommendation_generation: false

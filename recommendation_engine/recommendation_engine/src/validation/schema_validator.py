@@ -1,0 +1,42 @@
+"""
+MODULE: src\validation\schema_validator.py
+
+PURPOSE
+-------
+Validate the structure and schema of incoming datasets.
+
+IMPLEMENTATION REQUIREMENTS
+---------------------------
+- Check required columns.
+- Detect missing columns.
+- Detect unexpected columns.
+- Check configured datatype expectations.
+- Support schema versioning.
+- Compare schemas across incoming files.
+- Return structured validation issues with severity and evidence.
+- Do not modify the input data.
+
+ARCHITECTURAL CONSTRAINTS
+------------------------
+- Raw data must remain immutable.
+- Validation and cleaning must remain separate responsibilities.
+- Invalid records must be traceable through quarantine.
+- Configuration should contain business-specific rules.
+- Processing should be deterministic and idempotent.
+- Every important transformation must be auditable.
+- Do not silently discard records.
+- Do not invent business rules.
+- Do not perform feature engineering in preprocessing modules.
+- Do not train recommendation models in preprocessing modules.
+
+EXPECTED AI CODING AGENT BEHAVIOR
+--------------------------------
+- Inspect the repository before implementing.
+- Inspect actual input data before assuming column names or types.
+- Read configuration before hard-coding thresholds.
+- Reuse existing utilities instead of duplicating logic.
+- Add tests for important behavior.
+- Preserve the directory architecture.
+"""
+
+# Implementation intentionally left for the coding phase.

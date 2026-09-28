@@ -1,0 +1,25 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+.env
+.idea/
+.vscode/
+
+# Runtime data
+data/staging/*
+data/clean/*
+data/quarantine/*
+data/manifests/*
+logs/*
+reports/*
+
+# Keep folder structure
+!data/staging/.gitkeep
+!data/clean/.gitkeep
+!data/quarantine/.gitkeep
+!data/manifests/.gitkeep
+!logs/.gitkeep
+!reports/.gitkeep
